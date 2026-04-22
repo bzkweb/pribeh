@@ -18,7 +18,7 @@ const songs = [
   { title:"Zakliate vojsko pod Sitnom", book:"Slovenské ľudové rozprávky", author:"Samo Czambla", cover:"IMG/NG-pribeh-cover-3.jpg", src: "AUDIO/10.4_SLOVENSKE LUDOVE ROZPRAVKY_Zakliate vojsko pod Sitnom.mp3"},
 ];
 
-const CARD_H = 500; /* Musí sedieť s CSS height .card a .reel-mask */
+const CARD_H = 500;
 let current = 0, playing = false, animating = false;
 const track = document.getElementById('reelTrack');
 const audio = new Audio();
@@ -45,8 +45,10 @@ function updatePlayIcons() {
 
 audio.onended = () => navigate(1);
 
-function getRandomColor() {
-  return 'c' + Math.floor(Math.random() * 7);
+// Farba je teraz zafixovaná k objektu song, aby sa nemenila pri cyklení
+function getColorClass(songTitle) {
+  const hash = songTitle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return 'c' + (hash % 7);
 }
 
 function getRandomRotation() {
@@ -57,7 +59,7 @@ function buildCards() {
   const ext = [songs[songs.length-1], ...songs, songs[0]];
   track.innerHTML = '';
   ext.forEach((s) => {
-    const colorClass = getRandomColor();
+    const colorClass = getColorClass(s.title);
     const rotation = getRandomRotation();
     const card = document.createElement('div');
     card.className = 'card';
@@ -76,7 +78,6 @@ function buildCards() {
 
 function setPos(extIdx, instant) {
   const y = -extIdx * CARD_H;
-  // Zmenený čas na 0.8s a upravený easing pre "filmový" plynulý pocit
   track.style.transition = instant ? 'none' : 'transform 0.8s cubic-bezier(0.45, 0, 0.55, 1)';
   track.style.transform = `translateY(${y}px)`;
 }
@@ -102,10 +103,38 @@ function navigate(dir) {
   }, { once: true });
 }
 
-document.getElementById('btnPrev').addEventListener('click', () => navigate(-1));
-document.getElementById('btnNext').addEventListener('click', () => navigate(1));
-document.getElementById('btnPlay').addEventListener('click', togglePlay);
+// --- UNIVERZÁLNY HANDLER PRE DOTYK A MYŠ (iPad FIX) ---
+function setupControl(id, action) {
+  const btn = document.getElementById(id);
 
+  const start = (e) => {
+    // Zabránime emulovaným clickom a ghostingu
+    if (e.cancelable) e.preventDefault(); 
+    btn.classList.add('is-active');
+  };
+
+  const end = (e) => {
+    if (btn.classList.contains('is-active')) {
+      btn.classList.remove('is-active');
+      action();
+    }
+  };
+
+  const cancel = () => btn.classList.remove('is-active');
+
+  // Pointer udalosti pokrývajú myš aj dotyk jedným kódom
+  btn.addEventListener('pointerdown', start);
+  btn.addEventListener('pointerup', end);
+  btn.addEventListener('pointerleave', cancel);
+  btn.addEventListener('pointercancel', cancel);
+}
+
+// Priradenie akcií tlačidlám
+setupControl('btnPrev', () => navigate(-1));
+setupControl('btnNext', () => navigate(1));
+setupControl('btnPlay', () => togglePlay());
+
+// Inicializácia
 buildCards();
 setPos(current + 1, true);
 loadSong(current);

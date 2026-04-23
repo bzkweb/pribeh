@@ -10,6 +10,16 @@
   --green:   #a8d9b0;
   --black:   #111;
   --white:   #f8f5ef;
+
+  --card-w: min(600px, 92vw);
+  --card-h: calc(var(--card-w) * 1.25);
+  --cover-size: calc(var(--card-w) * 0.62);
+
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-reel: 0.65s;
+  --dur-cover: 0.9s;
+  --dur-btn: 0.25s;
 }
 
 body {
@@ -23,8 +33,7 @@ body {
   color: var(--black);
   overflow: hidden;
   position: relative;
-  /* Zamedzenie nechceného skrolovania a výberu textu na iPade */
-  touch-action: none; 
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -69,66 +78,82 @@ body {
 
 .reel-container {
   position: relative;
-  width: 400px;
+  width: var(--card-w);
 }
 
 .reel-mask {
-  width: 400px;
-  height: 500px;
+  width: var(--card-w);
+  height: var(--card-h);
   overflow: hidden;
   position: relative;
   background: var(--white);
+  display: flex;
+  align-items: flex-start;
 }
 
 .reel-track {
   display: flex;
   flex-direction: column;
-  /* GPU Akcelerácia */
   will-change: transform;
   transform: translateZ(0);
   -webkit-font-smoothing: antialiased;
 }
 
-.reel-fade-top, .reel-fade-bottom {
+.reel-track.is-animating {
+  transition: transform var(--dur-reel) var(--ease-smooth);
+}
+
+.reel-fade-top,
+.reel-fade-bottom {
   position: absolute;
-  left: 0; right: 0;
-  height: 100px;
+  left: 0;
+  right: 0;
+  height: 60px;
   z-index: 10;
   pointer-events: none;
 }
-.reel-fade-top { top: 0; background: linear-gradient(to bottom, var(--white) 20%, transparent 100%); }
-.reel-fade-bottom { bottom: 0; background: linear-gradient(to top, var(--white) 20%, transparent 100%); }
+
+.reel-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--white) 0%, transparent 100%);
+}
+
+.reel-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--white) 0%, transparent 100%);
+}
 
 .card {
-  width: 400px;
-  height: 500px;
+  width: var(--card-w);
+  height: var(--card-h);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px 18px 18px;
+  padding: clamp(14px, 4vw, 24px) clamp(12px, 3.5vw, 20px);
   background: var(--white);
 }
 
 .card-cover {
-  width: 250px;
-  height: 250px;
-  border: 4px solid var(--black);
+  width: var(--cover-size);
+  height: var(--cover-size);
+  border: 6px solid var(--black);
   overflow: hidden;
   position: relative;
-  margin-bottom: 24px;
+  margin-bottom: clamp(14px, 4vw, 28px);
   flex-shrink: 0;
-  /* Optimalizácia rotácie */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  transition: transform 0.8s cubic-bezier(0.45, 0, 0.55, 1);
+  transition: transform var(--dur-cover) var(--ease-spring);
 }
 
 .card-cover img {
-  width: 100%; height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
+  transition: opacity 0.4s var(--ease-smooth);
 }
 
 .c0 { background: var(--lavender); }
@@ -144,17 +169,17 @@ body {
 .song-label {
   display: inline-block;
   padding: 6px 16px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
   font-family: "kuhlman-vf", sans-serif;
-  font-size: 32px;
-  line-height: 1.1;
+  font-size: clamp(22px, 6vw, 34px);
+  line-height: 1.15;
   text-align: center;
-  max-width: 340px;
+  max-width: 100%;
   word-wrap: break-word;
 }
 
 .card-book {
-  font-size: 14px;
+  font-size: clamp(13px, 2.1vw, 20px);
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -163,56 +188,58 @@ body {
 }
 
 .card-author {
-  font-size: 16px;
+  font-size: clamp(13px, 2.1vw, 20px);
   color: #555;
   font-style: italic;
 }
 
-.controls { 
-  display: flex; 
-  align-items: center; 
-  gap: 20px; 
+.controls {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 4vw, 20px);
   margin-top: 10px;
 }
 
-/* --- OPRAVENÉ TLAČIDLÁ PRE IPAD --- */
 .btn-nav, .btn-play {
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s, transform 0.1s;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent; /* Zruší modrý ghosting */
+  -webkit-tap-highlight-color: transparent;
   outline: none;
+  transition:
+    background var(--dur-btn) var(--ease-smooth),
+    color      var(--dur-btn) var(--ease-smooth),
+    transform  0.15s         var(--ease-spring),
+    opacity    0.2s          var(--ease-smooth);
 }
 
 .btn-nav {
-  width: 56px; height: 56px;
+  width: clamp(44px, 10vw, 56px);
+  height: clamp(44px, 10vw, 56px);
   border-radius: 50%;
   background: var(--white);
   color: var(--black);
 }
 
-/* Hover iba pre myš */
-@media (hover: hover) {
-  .btn-nav:hover { background: var(--black); color: var(--white); }
-  .btn-play:hover { background: var(--pink); color: var(--black); }
+.btn-play {
+  width: clamp(64px, 15vw, 80px);
+  height: clamp(64px, 15vw, 80px);
+  border-radius: 50%;
+  background: var(--black);
+  color: var(--white);
 }
 
-/* Aktívny stav cez JS triedu pre iPad aj PC */
+@media (hover: hover) {
+  .btn-nav:hover  { background: var(--black); color: var(--white); }
+  .btn-play:hover { background: var(--pink);  color: var(--black); }
+}
+
 .btn-nav.is-active {
   background: var(--black) !important;
   color: var(--white) !important;
   transform: scale(0.92);
-}
-
-.btn-play {
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  background: var(--black);
-  color: var(--white);
-  transition: background 0.3s ease, color 0.3s ease, transform 0.1s ease;
 }
 
 .btn-play.is-playing {
@@ -225,6 +252,9 @@ body {
   opacity: 0.8;
 }
 
-@media (hover: hover) {
-  .btn-play:hover { background: var(--pink); color: var(--black); }
+@media (max-width: 640px) {
+  .reel-fade-top,
+  .reel-fade-bottom {
+    height: 48px;
+  }
 }

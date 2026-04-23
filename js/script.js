@@ -18,14 +18,15 @@ const songs = [
   { title:"Zakliate vojsko pod Sitnom", book:"Slovenské ľudové rozprávky", author:"Samo Czambla", cover:"IMG/NG-pribeh-cover-3.jpg", src: "AUDIO/10.4_SLOVENSKE LUDOVE ROZPRAVKY_Zakliate vojsko pod Sitnom.mp3"},
 ];
 
-const CARD_H = 500;
+function getCardHeight() {
+  const mask = document.querySelector('.reel-mask');
+  return mask ? mask.offsetHeight : 700;
+}
+
 let current = 0, playing = false, animating = false;
 const track = document.getElementById('reelTrack');
 const audio = new Audio();
 
-/**
- * Zafixuje farbu k názvu piesne, aby sa pri nekonečnom skrolovaní nemenila.
- */
 function getColorClass(songTitle) {
   let hash = 0;
   for (let i = 0; i < songTitle.length; i++) {
@@ -51,11 +52,11 @@ function updatePlayIcons() {
   if (playing) {
     iconPlay.style.display = 'none';
     iconPause.style.display = 'block';
-    btnPlay.classList.add('is-playing'); // CSS zmení farbu na pink
+    btnPlay.classList.add('is-playing');
   } else {
     iconPlay.style.display = 'block';
     iconPause.style.display = 'none';
-    btnPlay.classList.remove('is-playing'); // CSS vráti na čiernu
+    btnPlay.classList.remove('is-playing');
   }
 }
 
@@ -72,17 +73,15 @@ function togglePlay() {
 audio.onended = () => navigate(1);
 
 function buildCards() {
-  // Pridáme dummy karty na začiatok a koniec pre plynulý nekonečný loop
   const ext = [songs[songs.length - 1], ...songs, songs[0]];
   track.innerHTML = '';
-  
   ext.forEach((s) => {
     const colorClass = getColorClass(s.title);
     const rotation = getRandomRotation();
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
-      <div class="card-cover ${colorClass}" style="transform: rotate(${rotation}deg)">
+      <div class="card-cover" style="transform: rotate(${rotation}deg)">
         <img src="${s.cover}" alt="${s.title}" onerror="this.style.display='none'">
       </div>
       <div class="card-info">
@@ -94,88 +93,76 @@ function buildCards() {
   });
 }
 
-/**
- * Nastavenie pozície s GPU akceleráciou (translateZ(0))
- */
+// Nastav pozíciu — instant odstraňuje triedu, animovaný ju pridá
 function setPos(extIdx, instant) {
-  const y = -extIdx * CARD_H;
+  const cardH = getCardHeight();
+  const y = -extIdx * cardH;
+
   if (instant) {
-    track.style.transition = 'none';
+    // Vypni transition, skoč na pozíciu
+    track.classList.remove('is-animating');
+    track.style.transform = `translateY(${y}px) translateZ(0)`;
   } else {
-    // cubic-bezier optimalizovaný pre plynulý dojazd na dotykových displejoch
-    track.style.transition = 'transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1)';
+    // Zapni CSS transition cez triedu, potom zmeň transform
+    track.classList.add('is-animating');
+    // requestAnimationFrame zaručí, že prehliadač stihne aplikovať triedu pred zmenou transformu
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        track.style.transform = `translateY(${y}px) translateZ(0)`;
+      });
+    });
   }
-  
-  // translateZ(0) vynúti renderovanie cez grafický čip (plynulosť)
-  track.style.transform = `translateY(${y}px) translateZ(0)`;
 }
 
 function navigate(dir) {
   if (animating) return;
   animating = true;
-  
+
   const tgtExt = (current + 1) + dir;
   const wrap = ((current + dir) % songs.length + songs.length) % songs.length;
 
-  // Spustenie animácie
-  requestAnimationFrame(() => {
-    setPos(tgtExt, false);
-  });
-  
+  setPos(tgtExt, false);
+
   const onTransitionEnd = () => {
     track.removeEventListener('transitionend', onTransitionEnd);
     current = wrap;
-    setPos(current + 1, true); // Okamžitý skok na reálnu pozíciu (neviditeľne)
-    
+    // Skok na skutočnú pozíciu bez animácie
+    setPos(current + 1, true);
     loadSong(current);
     if (playing) {
       audio.play().catch(e => console.log("Auto-play error:", e));
     }
-    
     animating = false;
   };
 
   track.addEventListener('transitionend', onTransitionEnd);
 }
 
-/**
- * Špeciálny handler pre iPad: eliminuje ghosting a oneskorenie dotyku.
- */
 function setupControl(id, action) {
   const btn = document.getElementById(id);
-  
-  const handleStart = (e) => {
-    // Zabraňuje simulovaným "click" udalostiam a systémovému zvýrazneniu
-    if (e.cancelable) e.preventDefault(); 
-    btn.classList.add('is-active');
-  };
+  if (!btn) return;
 
-  const handleEnd = (e) => {
+  btn.addEventListener('pointerdown', () => btn.classList.add('is-active'));
+  btn.addEventListener('pointerup', () => {
     if (btn.classList.contains('is-active')) {
       btn.classList.remove('is-active');
       action();
     }
-  };
-
-  const handleCancel = () => {
-    btn.classList.remove('is-active');
-  };
-
-  // Pointer udalosti fungujú pre myš aj dotyk (iOS 13+)
-  btn.addEventListener('pointerdown', handleStart);
-  btn.addEventListener('pointerup', handleEnd);
-  btn.addEventListener('pointerleave', handleCancel);
-  btn.addEventListener('pointercancel', handleCancel);
+  });
+  btn.addEventListener('pointerleave', () => btn.classList.remove('is-active'));
+  btn.addEventListener('pointercancel', () => btn.classList.remove('is-active'));
 }
 
-// Inicializácia pri načítaní
 document.addEventListener('DOMContentLoaded', () => {
   buildCards();
   setPos(current + 1, true);
   loadSong(current);
 
-  // Naviazanie ovládania
   setupControl('btnPrev', () => navigate(-1));
   setupControl('btnNext', () => navigate(1));
   setupControl('btnPlay', () => togglePlay());
+});
+
+window.addEventListener('resize', () => {
+  setPos(current + 1, true);
 });

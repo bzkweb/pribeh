@@ -184,7 +184,7 @@ body {
 }
 
 .card-book {
-  font-size: clamp(15px, 1.8vw, 18px);
+  font-size: clamp(20px, 2vw, 20px);
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -193,7 +193,7 @@ body {
 }
 
 .card-author {
-  font-size: clamp(15px, 1.8vw, 18px);
+  font-size: clamp(20px, 2vw, 20px);
   color: #555;
   font-style: italic;
 }
